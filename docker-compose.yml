@@ -46,11 +46,13 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+    networks:
+      - car_rental_network
     entrypoint: >
       /bin/sh -c "
       mc alias set myminio http://minio:9000 minioadmin minioadmin;
       mc mb myminio/car-rental --ignore-existing;
-      mc anonymous set public myminio/car-rental;
+      mc anonymous set download myminio/car-rental;
       echo 'MinIO bucket setup completed';
       "
     restart: "no"
