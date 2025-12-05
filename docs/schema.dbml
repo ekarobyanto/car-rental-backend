@@ -1,0 +1,103 @@
+Project car_rental {
+  database_type: 'PostgreSQL'
+  Note: '''
+    # Car Rental Management System Database
+    
+    A complete database schema for managing car rentals, including user authentication,
+    car inventory, renter information, and rental transactions.
+  '''
+}
+
+Table users {
+  id uuid [pk, default: `uuid_generate_v4()`, note: 'Primary key']
+  email varchar(255) [unique, not null, note: 'User email for authentication']
+  name varchar(255) [not null, note: 'User full name']
+  password varchar(255) [not null, note: 'Hashed password']
+  created_at timestamptz [default: `CURRENT_TIMESTAMP`, note: 'Record creation timestamp']
+  updated_at timestamptz [default: `CURRENT_TIMESTAMP`, note: 'Record last update timestamp']
+  deleted_at timestamptz [note: 'Soft delete timestamp']
+  
+  Indexes {
+    deleted_at [name: 'idx_users_deleted_at']
+    email [name: 'idx_users_email']
+  }
+  
+  Note: 'System users with authentication capabilities'
+}
+
+Table cars {
+  id uuid [pk, default: `uuid_generate_v4()`, note: 'Primary key']
+  name varchar(255) [not null, note: 'Car model name']
+  brand varchar(255) [not null, note: 'Car brand/manufacturer']
+  production_year int [not null, note: 'Year of production']
+  passenger_capacity int [not null, note: 'Number of passengers']
+  transmission_type varchar(20) [not null, note: 'manual or automatic']
+  license_plate varchar(50) [unique, not null, note: 'Vehicle license plate number']
+  rental_price_per_day decimal(10,2) [not null, note: 'Daily rental price']
+  status varchar(20) [not null, default: 'available', note: 'available, rented, or maintenance']
+  photo_url text [note: 'URL to car photo in MinIO']
+  created_at timestamptz [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamptz [default: `CURRENT_TIMESTAMP`]
+  deleted_at timestamptz [note: 'Soft delete timestamp']
+  
+  Indexes {
+    status [name: 'idx_cars_status']
+    deleted_at [name: 'idx_cars_deleted_at']
+    license_plate [name: 'idx_cars_license_plate']
+  }
+  
+  Note: 'Car inventory available for rental'
+}
+
+Table renters {
+  id uuid [pk, default: `uuid_generate_v4()`, note: 'Primary key']
+  name varchar(255) [not null, note: 'Renter full name']
+  id_card_number varchar(50) [unique, not null, note: 'National ID card number']
+  phone_number varchar(50) [not null, note: 'Contact phone number']
+  address text [not null, note: 'Full address']
+  driving_license_number varchar(50) [not null, note: 'Driving license number']
+  id_card_photo_url text [note: 'URL to ID card photo in MinIO']
+  driving_license_photo_url text [note: 'URL to license photo in MinIO']
+  created_at timestamptz [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamptz [default: `CURRENT_TIMESTAMP`]
+  deleted_at timestamptz [note: 'Soft delete timestamp']
+  
+  Indexes {
+    id_card_number [name: 'idx_renters_id_card_number']
+    deleted_at [name: 'idx_renters_deleted_at']
+  }
+  
+  Note: 'Customers who rent vehicles'
+}
+
+Table rental_transactions {
+  id uuid [pk, default: `uuid_generate_v4()`, note: 'Primary key']
+  renter_id uuid [not null, ref: > renters.id, note: 'Reference to renter']
+  car_id uuid [not null, ref: > cars.id, note: 'Reference to car']
+  rental_start_date timestamptz [not null, note: 'Rental start date and time']
+  rental_end_date timestamptz [not null, note: 'Planned rental end date']
+  total_rental_cost decimal(10,2) [not null, note: 'Calculated rental cost']
+  status varchar(20) [not null, default: 'booked', note: 'booked, in-progress, completed, or cancelled']
+  car_condition_on_return text [note: 'Description of car condition after return']
+  penalty_fee decimal(10,2) [default: 0, note: 'Additional penalty fee if applicable']
+  final_total_payment decimal(10,2) [note: 'Final payment including penalties']
+  actual_return_date timestamptz [note: 'Actual return date and time']
+  notes text [note: 'Additional notes or remarks']
+  created_at timestamptz [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamptz [default: `CURRENT_TIMESTAMP`]
+  deleted_at timestamptz [note: 'Soft delete timestamp']
+  
+  Indexes {
+    renter_id [name: 'idx_rental_transactions_renter_id']
+    car_id [name: 'idx_rental_transactions_car_id']
+    status [name: 'idx_rental_transactions_status']
+    deleted_at [name: 'idx_rental_transactions_deleted_at']
+    (rental_start_date, rental_end_date) [name: 'idx_rental_transactions_dates']
+  }
+  
+  Note: 'Rental transaction records with complete lifecycle'
+}
+
+// Relationships
+Ref: rental_transactions.renter_id > renters.id [delete: restrict, note: 'Each transaction belongs to one renter']
+Ref: rental_transactions.car_id > cars.id [delete: restrict, note: 'Each transaction is for one car']

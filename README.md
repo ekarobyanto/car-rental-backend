@@ -1,102 +1,71 @@
-# Car Rental Backend
+# Car Rental Backend API
 
-A Go backend application using clean architecture with Fiber framework.
+A RESTful API for car rental management system built with Go, Fiber, PostgreSQL, and MinIO.
+
+## Features
+
+- **Authentication** - JWT-based user authentication
+- **Car Management** - CRUD operations for car inventory
+- **Renter Management** - Customer information with photo uploads
+- **Rental Transactions** - Complete rental workflow (booking, pickup, return, cancellation)
+- **File Storage** - MinIO integration for photo uploads
+- **Database Migrations** - Automated schema management
 
 ## Tech Stack
 
-- **Framework**: Fiber v2
-- **ORM**: GORM
-- **Database**: PostgreSQL
-- **Dependency Injection**: Wire
-- **Migrations**: go-migrate
-- **Storage**: MinIO
-- **Configuration**: Environment variables
-
-## Project Structure
-
-```
-.
-├── cmd/
-│   └── server/          # Application entry point
-│       ├── main.go      # Main application
-│       ├── wire.go      # Wire dependency injection
-│       └── wire_gen.go  # Generated wire code
-├── config/              # Configuration management
-├── internal/            # Private application code
-│   ├── dto/            # Data Transfer Objects
-│   ├── handler/        # HTTP handlers (controllers)
-│   ├── model/          # Domain models
-│   ├── repository/     # Data access layer
-│   └── service/        # Business logic layer
-├── pkg/                # Public packages
-│   ├── database/       # Database connection
-│   ├── minio/          # MinIO client
-│   └── response/       # HTTP response helpers
-├── migrations/         # Database migrations
-└── go.mod
-```
+- **Go 1.24** - Programming language
+- **Fiber v2** - Web framework
+- **PostgreSQL 15** - Database
+- **MinIO** - Object storage
+- **GORM** - ORM
+- **Wire** - Dependency injection
+- **JWT** - Authentication
+- **Docker** - Containerization
 
 ## Prerequisites
 
-- Go 1.23+
-- PostgreSQL
-- MinIO (or S3-compatible storage)
-- migrate CLI tool
-- Docker & Docker Compose (for containerized deployment)
+- Go 1.24+
+- Docker & Docker Compose
+- Make (optional)
 
-## Quick Start with Docker
+## Quick Start
 
-The fastest way to get started:
+### Using Docker (Recommended)
 
 ```bash
-# Start all services (PostgreSQL, MinIO, Backend)
-make docker-up
+# Clone the repository
+git clone <repository-url>
+cd carcirus_backend_test
 
-# View logs
-make docker-logs
+# Start all services
+docker compose up --build
 
-# Stop services
-make docker-down
+# API will be available at http://localhost:8080
 ```
 
-The application will run at http://localhost:8080 with pre-seeded data.
+### Local Development
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.
-
-## Installation (Local Development)
-
-1. Clone the repository
-2. Copy environment variables:
 ```bash
-cp .env.example .env
-```
-
-3. Install dependencies:
-```bash
+# Install dependencies
 go mod download
-```
 
-4. Install go-migrate:
-```bash
-# macOS
-brew install golang-migrate
-
-# Linux
-curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz | tar xvz
-sudo mv migrate /usr/local/bin/
-
-# Windows
-scoop install migrate
-```
-
-5. Install Wire:
-```bash
+# Install Wire
 go install github.com/google/wire/cmd/wire@latest
+
+# Copy environment file
+cp .env.example .env
+
+# Generate dependency injection code
+make wire
+
+# Run migrations
+make migrate-up
+
+# Run the application
+make run
 ```
 
-## Configuration
-
-Edit the `.env` file with your settings:
+## Environment Variables
 
 ```env
 # Server
@@ -104,7 +73,7 @@ SERVER_PORT=8080
 SERVER_HOST=0.0.0.0
 
 # Database
-DB_HOST=localhost
+DB_HOST=postgres
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=postgres
@@ -112,171 +81,95 @@ DB_NAME=car_rental
 DB_SSLMODE=disable
 
 # MinIO
-MINIO_ENDPOINT=localhost:9000
+MINIO_ENDPOINT=minio:9000
+MINIO_PUBLIC_URL=http://localhost:9000
 MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
 MINIO_USE_SSL=false
 MINIO_BUCKET_NAME=car-rental
-```
 
-## Running Migrations
-
-Make the migration script executable:
-```bash
-chmod +x migrate.sh
-```
-
-Run migrations:
-```bash
-# Run all migrations
-./migrate.sh up
-
-# Rollback last migration
-./migrate.sh down
-
-# Create new migration
-./migrate.sh create add_cars_table
-
-# Check current version
-./migrate.sh version
-
-# Force to specific version
-./migrate.sh force 1
-```
-
-## Generate Wire Dependencies
-
-When you modify the dependency injection setup:
-
-```bash
-cd cmd/server
-wire
-```
-
-## Running the Application
-
-### With Docker (Recommended)
-
-```bash
-# Production mode (all services)
-make docker-up
-
-# Development mode (only database services)
-make docker-dev
-go run cmd/server/main.go
-```
-
-### Without Docker
-
-```bash
-go run cmd/server/main.go
-```
-
-Or build and run:
-
-```bash
-go build -o bin/server cmd/server/main.go
-./bin/server
-```
-
-## Test Credentials
-
-After running migrations with seed data:
-
-```
-Admin User:
-  Email: admin@carental.com
-  Password: password123
-
-Staff User:
-  Email: staff@carental.com
-  Password: password123
+# JWT
+JWT_SECRET_KEY=super-secret
+JWT_TOKEN_DURATION=24h
 ```
 
 ## API Endpoints
 
-### Health Check
-- `GET /health` - Check server health
+### Authentication
+- `POST /api/v1/auth/register` - Register new user
+- `POST /api/v1/auth/login` - User login
 
-### Public Endpoints (No Authentication)
-- `POST /api/v1/public/register` - Register new user
-- `POST /api/v1/public/login` - User login (returns JWT token)
+### Cars (Protected)
+- `GET /api/v1/cars` - List cars (paginated)
+- `POST /api/v1/cars` - Create car
+- `PUT /api/v1/cars/:id` - Update car
+- `DELETE /api/v1/cars/:id` - Delete car
 
-### Protected Endpoints (Requires JWT Token)
-- `GET /api/v1/users/me` - Get current user info
-- `GET /api/v1/users` - List users (with pagination)
-- `GET /api/v1/users/:id` - Get user by ID
-- `PUT /api/v1/users/:id` - Update user
-- `DELETE /api/v1/users/:id` - Delete user
+### Renters (Protected)
+- `GET /api/v1/renters` - List renters (paginated)
+- `POST /api/v1/renters` - Create renter
+- `PUT /api/v1/renters/:id` - Update renter
+- `DELETE /api/v1/renters/:id` - Delete renter
 
-**Authentication**: Protected endpoints require `Authorization: Bearer <token>` header.
+### Rental Transactions (Protected)
+- `GET /api/v1/rental-transactions` - List transactions (paginated)
+- `GET /api/v1/rental-transactions/:id` - Get transaction detail
+- `POST /api/v1/rental-transactions` - Create booking
+- `PUT /api/v1/rental-transactions/:id/pickup` - Mark as picked up
+- `PUT /api/v1/rental-transactions/:id/return` - Process return
+- `PUT /api/v1/rental-transactions/:id/cancel` - Cancel booking
+- `DELETE /api/v1/rental-transactions/:id` - Delete transaction
 
-See [JWT Authentication Documentation](docs/JWT_AUTHENTICATION.md) for detailed usage.
+## Makefile Commands
 
-## Example API Requests
-
-### Register User
 ```bash
-curl -X POST http://localhost:8080/api/v1/public/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "name": "John Doe",
-    "password": "password123",
-    "phone": "+1234567890"
-  }'
+make run           # Run the application
+make build         # Build the application
+make wire          # Generate Wire dependency injection
+make migrate-up    # Run database migrations
+make migrate-down  # Rollback migrations
+make migrate-fresh # Drop and recreate database
 ```
 
-### Login
+## Database Migrations
+
+Migrations are located in `migrations/` directory and run automatically on Docker startup.
+
+Manual migration:
 ```bash
-curl -X POST http://localhost:8080/api/v1/public/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password123"
-  }'
+# Up
+./migrate.sh up
+
+# Down
+./migrate.sh down
+
+# Create new migration
+./migrate.sh create <migration_name>
 ```
 
-### Access Protected Endpoint
-```bash
-# Get token from login response, then:
-curl -X GET http://localhost:8080/api/v1/users/me \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+## Project Structure
+
 ```
-
-## Development
-
-### Adding New Features
-
-1. Create model in `internal/model/`
-2. Create DTOs in `internal/dto/`
-3. Create repository interface and implementation in `internal/repository/`
-4. Create service interface and implementation in `internal/service/`
-5. Create handler in `internal/handler/`
-6. Register handler in Wire (`cmd/server/wire.go`)
-7. Run `wire` to regenerate dependencies
-8. Register routes in `cmd/server/main.go`
-
-### Creating Migrations
-
-```bash
-./migrate.sh create your_migration_name
-```
-
-This creates two files:
-- `migrations/XXXXXX_your_migration_name.up.sql`
-- `migrations/XXXXXX_your_migration_name.down.sql`
-
-## Docker Setup (Optional)
-
-### PostgreSQL
-```bash
-docker run --name postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=car_rental -p 5432:5432 -d postgres:15-alpine
-```
-
-### MinIO
-```bash
-docker run --name minio -p 9000:9000 -p 9001:9001 -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin -d quay.io/minio/minio server /data --console-address ":9001"
+.
+├── cmd/server/          # Application entry point
+├── config/              # Configuration management
+├── internal/
+│   ├── dto/            # Data transfer objects
+│   ├── handler/        # HTTP handlers
+│   ├── middleware/     # Middlewares
+│   ├── model/          # Database models
+│   ├── repository/     # Data access layer
+│   ├── service/        # Business logic
+│   └── providers/      # Wire providers
+├── pkg/
+│   ├── database/       # Database connection
+│   ├── jwt/            # JWT utilities
+│   ├── minio/          # MinIO client
+│   └── response/       # Response helpers
+├── migrations/         # SQL migrations
+├── docker-compose.yml  # Docker services
+├── Dockerfile          # Application container
+└── Makefile           # Build commands
 ```
 
 ## License
