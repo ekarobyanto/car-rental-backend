@@ -1,0 +1,11 @@
+.env
+*.log
+tmp/
+bin/
+coverage.out
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
