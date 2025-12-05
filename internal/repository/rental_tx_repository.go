@@ -69,7 +69,31 @@ func (r *RentalTransactionRepository) Create(req *model.RentalTransaction) error
 }
 
 func (r *RentalTransactionRepository) Update(req *model.RentalTransaction) error {
-	return r.db.Save(&req).Error
+	tx := r.db.Begin()
+	defer tx.Rollback()
+
+	err := tx.Save(&req).Error
+	if err != nil {
+		return err
+	}
+
+	var carStatus string
+	switch req.Status {
+	case constants.RENTAL_STATUS_IN_PROGRESS:
+		carStatus = constants.CAR_STATUS_RENTED
+	case constants.RENTAL_STATUS_COMPLETED, constants.RENTAL_STATUS_CANCELLED:
+		carStatus = constants.CAR_STATUS_AVAILABLE
+	default:
+		return tx.Commit().Error
+	}
+
+	err = tx.Model(&model.Car{}).Where("id = ?", req.CarID).
+		Update("status", carStatus).Error
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit().Error
 }
 
 func (r *RentalTransactionRepository) Delete(id uuid.UUID) error {

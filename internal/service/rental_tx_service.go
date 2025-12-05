@@ -111,7 +111,6 @@ func (s *RentalTransactionService) Pickup(id uuid.UUID) error {
 	}
 
 	tx.Status = constants.RENTAL_STATUS_IN_PROGRESS
-	tx.Car.Status = constants.CAR_STATUS_RENTED
 	if err := s.repo.Update(tx); err != nil {
 		return fmt.Errorf("failed to update rental transaction: %w", err)
 	}
@@ -135,7 +134,6 @@ func (s *RentalTransactionService) Return(id uuid.UUID, req *dto.ReturnRentalReq
 	tx.CarConditionOnReturn = req.CarConditionOnReturn
 	tx.ActualReturnDate = req.ActualReturnDate
 	tx.Status = constants.RENTAL_STATUS_COMPLETED
-	tx.Car.Status = constants.CAR_STATUS_AVAILABLE
 
 	if req.PenaltyFee != nil {
 		tx.PenaltyFee = *req.PenaltyFee
@@ -167,7 +165,6 @@ func (s *RentalTransactionService) Cancel(id uuid.UUID) error {
 	}
 
 	tx.Status = constants.RENTAL_STATUS_CANCELLED
-	tx.Car.Status = constants.CAR_STATUS_AVAILABLE
 
 	if err := s.repo.Update(tx); err != nil {
 		return fmt.Errorf("failed to update rental transaction: %w", err)
